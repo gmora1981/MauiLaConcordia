@@ -1,0 +1,13 @@
+﻿page "/Logout"
+@inject NavigationManager uriHelper
+@inject MauiLaConcordia.Shared.Auth.ILoginService loginService
+
+<p>Saliendo....</p>
+
+@code {
+    protected async override Task OnInitializedAsync()
+    {
+        await loginService.Logout();
+        uriHelper.NavigateTo("");
+    }
+}
