@@ -2,7 +2,6 @@
 using MauiLaConcordia.Shared.Model;
 using MauiLaConcordia.Shared.Repository;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +15,7 @@ namespace MauiLaConcordia.Shared.Auth
 {
     public class JWTAuthenticationStateProvider : AuthenticationStateProvider, ILoginService
     {
-        private readonly IJSRuntime js;
+        private readonly ITokenStorage tokenStorage;
         private readonly HttpClient httpClient;
         private readonly IAccountsRepository accountsRepository;
         private readonly string TOKENKEY = "TOKENKEY";
@@ -25,24 +24,24 @@ namespace MauiLaConcordia.Shared.Auth
         private AuthenticationState Anonymous =>
             new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
 
-        public JWTAuthenticationStateProvider(IJSRuntime js, HttpClient httpClient,
+        public JWTAuthenticationStateProvider(ITokenStorage tokenStorage, HttpClient httpClient,
             IAccountsRepository usersRepository)
         {
-            this.js = js;
+            this.tokenStorage = tokenStorage;
             this.httpClient = httpClient;
             this.accountsRepository = usersRepository;
         }
 
         public async override Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var token = await js.GetFromLocalStorage(TOKENKEY);
+            var token = await tokenStorage.GetToken(TOKENKEY);
 
             if (string.IsNullOrEmpty(token))
             {
                 return Anonymous;
             }
 
-            var expirationTimeString = await js.GetFromLocalStorage(EXPIRATIONTOKENKEY);
+            var expirationTimeString = await tokenStorage.GetToken(EXPIRATIONTOKENKEY);
             DateTime expirationTime;
 
             if (DateTime.TryParse(expirationTimeString, out expirationTime))
@@ -64,7 +63,7 @@ namespace MauiLaConcordia.Shared.Auth
 
         public async Task TryRenewToken()
         {
-            var expirationTimeString = await js.GetFromLocalStorage(EXPIRATIONTOKENKEY);
+            var expirationTimeString = await tokenStorage.GetToken(EXPIRATIONTOKENKEY);
             DateTime expirationTime;
 
             if (DateTime.TryParse(expirationTimeString, out expirationTime))
@@ -76,7 +75,7 @@ namespace MauiLaConcordia.Shared.Auth
 
                 if (ShouldRenewToken(expirationTime))
                 {
-                    var token = await js.GetFromLocalStorage(TOKENKEY);
+                    var token = await tokenStorage.GetToken(TOKENKEY);
                     var newToken = await RenewToken(token);
                     var authState = BuildAuthenticationState(newToken);
                     NotifyAuthenticationStateChanged(Task.FromResult(authState));
@@ -88,8 +87,8 @@ namespace MauiLaConcordia.Shared.Auth
         {
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", token);
             var newToken = await accountsRepository.RenewToken();
-            await js.SetInLocalStorage(TOKENKEY, newToken.Token);
-            await js.SetInLocalStorage(EXPIRATIONTOKENKEY, newToken.Expiration.ToString());
+            await tokenStorage.SetToken(TOKENKEY, newToken.Token);
+            await tokenStorage.SetToken(EXPIRATIONTOKENKEY, newToken.Expiration.ToString());
             return newToken.Token;
         }
 
@@ -153,8 +152,8 @@ namespace MauiLaConcordia.Shared.Auth
 
         public async Task Login(UserToken userToken)
         {
-            await js.SetInLocalStorage(TOKENKEY, userToken.Token);
-            await js.SetInLocalStorage(EXPIRATIONTOKENKEY, userToken.Expiration.ToString());
+            await tokenStorage.SetToken(TOKENKEY, userToken.Token);
+            await tokenStorage.SetToken(EXPIRATIONTOKENKEY, userToken.Expiration.ToString());
             var authState = BuildAuthenticationState(userToken.Token);
             NotifyAuthenticationStateChanged(Task.FromResult(authState));
         }
@@ -167,10 +166,9 @@ namespace MauiLaConcordia.Shared.Auth
 
         private async Task CleanUp()
         {
-            await js.RemoveItem(TOKENKEY);
-            await js.RemoveItem(EXPIRATIONTOKENKEY);
+            await tokenStorage.RemoveToken(TOKENKEY);
+            await tokenStorage.RemoveToken(EXPIRATIONTOKENKEY);
             httpClient.DefaultRequestHeaders.Authorization = null;
         }
-
     }
 }

@@ -10,7 +10,7 @@
 @inject MauiLaConcordia.Shared.Repository.IAccountsRepository accountsRepository
 @inject HttpClient http
 @inject NavigationManager navigationManager
-@inject IDisplayMessage displayMessage
+@* @inject IDisplayMessage displayMessage *@
 
 
 <div class="m-0 vh-100 row justify-content-center align-items-center  ">
@@ -91,7 +91,7 @@
         catch (Exception ex)
         {
             Console.WriteLine(ex.Message);
-            await displayMessage.DisplayErrorMessage(ex.Message);
+          //  await displayMessage.DisplayErrorMessage(ex.Message);
         }
 
     }

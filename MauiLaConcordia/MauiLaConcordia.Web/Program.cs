@@ -29,6 +29,7 @@ builder.Services.AddAuthentication();
 // Migra los servicios de autenticación
 builder.Services.AddScoped<TokenRenewer>();
 builder.Services.AddScoped<JWTAuthenticationStateProvider>();
+builder.Services.AddScoped<ITokenStorage, BrowserTokenStorage>();
 builder.Services.AddScoped<AuthenticationStateProvider, JWTAuthenticationStateProvider>(
     provider => provider.GetRequiredService<JWTAuthenticationStateProvider>());
 builder.Services.AddScoped<ILoginService, JWTAuthenticationStateProvider>(
